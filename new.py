@@ -122,6 +122,7 @@ def find(update: Update, context: CallbackContext):
         central_long = (min_long + max_long) / 2
         print(central_lat)
         print(central_long)  # coordinates for API
+        central_location[chat_id] = {central_lat, central_long}
         update.message.reply_text("The central location is:", quote=False)
         update.message.reply_location(central_lat, central_long, quote=False)
         update.message.reply_text("Showing restaurants nearby", quote=False)
@@ -143,9 +144,10 @@ def filter_places(update: Update, context: CallbackContext):
         request_start(chat_id)
         return
 
-    # if chat_id not in central_location:
-    #     request_done(chat_id)
-    #     return
+    if chat_id not in central_location:
+        request_done(chat_id)
+        return
+
     chat_text = "Select where your group would like to dine."
 
     buttons = [
