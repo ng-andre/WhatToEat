@@ -139,18 +139,26 @@ def handle_callback(call):
     if intent == 'place':
         view_place_selected(chat_id, extra_data)
         return
+    if intent == 'restriction':
+        view_restaurants_suitable(chat_id, extra_data)
+        return
 
     print(f'{chat_id}: Callback not implemented')
 
 
 def view_place_selected(chat_id, data):
     if data == ['cafes'] or data == ['bars']:
-        display_results(chat_id, data)
+        display_places_results(chat_id, data)
         return
     else:
         # display restaurants: another format
         display_restaurants(chat_id, data)
         return
+
+
+def display_places_results(chat_id, data):  # replace with lz actual function call
+    bot.send_message(chat_id=chat_id, text=data)
+    return
 
 
 def display_restaurants(chat_id, data):
@@ -161,23 +169,38 @@ def display_restaurants(chat_id, data):
     restrictions = ['Halal', 'Vegetarian', 'NIL']
     buttons = []
 
-    for place in restrictions:
+    for restriction in restrictions:
         row = []
         button = InlineKeyboardButton(
-            place,
-            callback_data='place ' + place
+            restriction,
+            callback_data='restriction ' + restriction
         )
         row.append(button)
         buttons.append(row)
 
     bot.send_message(
         chat_id=chat_id,
-        text=chat_text,
+        text=dietary_restrictions_chat_text,
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
 
-def display_results(chat_id, data):
+def view_restaurants_suitable(chat_id, data):
+    if data == ['Halal'] or data == ['Vegetarian']:
+        display_restrictions_results(chat_id, data)
+        return
+    else:
+        print('cuisines')
+        display_cuisines(chat_id, data)
+        return
+
+
+def display_restrictions_results(chat_id, data):  # replace with lz actual function call
+    bot.send_message(chat_id=chat_id, text=data)
+    return
+
+
+def display_cuisines(chat_id, data):  # replace with lz actual function call
     bot.send_message(chat_id=chat_id, text=data)
     return
 
