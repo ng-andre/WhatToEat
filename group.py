@@ -47,6 +47,13 @@ def echo(update: Update, context: CallbackContext) -> None:
 
 def location(update: Update, context: CallbackContext):
     message = update.message
+    chat_type = message.chat.type
+    print(chat_type)
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group!')
+        return
+
     location_data = message.location
     user = message.from_user.username
     chat_id = message.chat_id
