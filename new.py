@@ -47,8 +47,14 @@ bot.set_my_commands([
 @bot.message_handler(commands=['start'])
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('Get Started \n '
+                                  '1. add @SGEatWhereBot into your group chat.\n '
+                                  '2. call the /start command in the group chat and follow the instructions.\n')
+        return
 
-    user = update.effective_user
     update.message.reply_text('Please send your current location!')
     chat_id = update.message.chat_id
     if chat_id in locations:
@@ -59,10 +65,21 @@ def start(update: Update, context: CallbackContext) -> None:
 def help(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text('Use the command /start to find a common place to eat')
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
+        return
 
 
 @bot.message_handler(commands=['find'])
 def find(update: Update, context: CallbackContext):
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
+        return
+
     chat_id = update.message.chat_id
     print("Dictionary print...")
     print(locations)
@@ -104,7 +121,7 @@ def location(update: Update, context: CallbackContext):
     print(chat_type)
     if chat_type == "private":
         print("is private")
-        update.message.reply_text('This bot can only be used in a group!')
+        update.message.reply_text('This bot can only be used in a group chat!')
         return
 
     location_data = message.location
