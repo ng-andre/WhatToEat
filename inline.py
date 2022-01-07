@@ -39,11 +39,16 @@ def request_done(update: Update):
     update.message.reply_text('Please indicate that all addresses have been entered by sending /done')
 
 
+def random():
+    # randomly generate a unique 5 char string for chat id
+    return "mLzSd"
+
+
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
-    chat_id = update.message.chat_id
+    chat_id = random()
     locations[chat_id] = {}
     print(chat_id)
     update.message.reply_text('Hi!')
@@ -73,7 +78,7 @@ def list_locations(update: Update, context: CallbackContext) -> None:
 
 def inlinequery(update: Update, context: CallbackContext) -> None:
     """Handle the inline query."""
-    chat_id = update.inline_query.bot.id
+    chat_id = update.message.chat_id
     user_id = update.inline_query.from_user.id
     print(chat_id)
     location = update.inline_query.location
