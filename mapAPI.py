@@ -1,33 +1,33 @@
-import googlemaps
-import requests
-
-API_KEY = "AIzaSyDbd8nrqxr6y4ys59aXVDxYZLcSNH8EOG8";
-map_client = googlemaps.Client(API_KEY)
-
-# nus location for testing
-lat = 1.2966
-long = 103.7764
-
-radius = 1000
-type = "restaurant"
-url = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{long}&radius={radius}&type={type}&key={API_KEY}'
-
-payload={}
-headers = {}
-
-jsonResponse = requests.request("GET", url, headers=headers, data=payload).json()
-results = jsonResponse["results"]
-
-# dict to store name and location of the nearby restaurants
-storeDetails = {}
-
-for i in range(len(results)):
-    name = results[i]["name"]
-    vicinity = results[i]["vicinity"]
-    storeDetails[name] = vicinity
-
-# for key in storeDetails:
-#     print("NAME: " + key + "   LOCATION: " + storeDetails[key])
+import geocoding
+from math import sin, cos, sqrt, atan2, radians
+import place
 
 
+def calculatedistance(x1, x2, y1, y2):
+    R = 6373.0
+    lat1 = radians(x1)
+    lon1 = radians(y1)
+    lat2 = radians(x2)
+    lon2 = radians(y2)
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    distance = R * c * 1000
+    return distance
 
+
+placeResults = place.results
+placeDetails = place.storeDetails
+
+for i in range(len(placeResults)):
+    placeLat = placeResults[i]["geometry"]["location"]["lat"]
+    placeLong = placeResults[i]["geometry"]["location"]["lng"]
+    dist = calculatedistance(geocoding.lat, placeLat, geocoding.long, placeLong)
+    if dist < 1500:
+        name = placeResults[i]["name"]
+        formattedAddress = placeResults[i]["formatted_address"]
+        placeDetails[name] = formattedAddress
+
+for key in placeDetails:
+    print("NAME: " + key + "   LOCATION: " + placeDetails[key])
