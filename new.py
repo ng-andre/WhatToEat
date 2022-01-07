@@ -117,7 +117,7 @@ def main() -> None:
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("done", done))
+    dispatcher.add_handler(CommandHandler("find", done))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
     location_handler = MessageHandler(Filters.location, location)
