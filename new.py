@@ -15,9 +15,14 @@ bot.
 
 import logging
 import os
+import telebot
 
+from telebot.types import BotCommand
 from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+TOKEN = os.getenv("TOKEN")
+bot = telebot.TeleBot(TOKEN)
 
 # Enable logging
 logging.basicConfig(
@@ -30,25 +35,51 @@ locations = {}
 central_location = {}
 flags = {}
 
+bot.set_my_commands([
+    BotCommand('start', 'Starts the bot'),
+    BotCommand('help', 'Get information on how to get started'),
+    BotCommand('find', 'Find central location and nearby restaurants')
+])
+
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
+@bot.message_handler(commands=['start'])
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('Get Started \n '
+                                  '1. add @SGEatWhereBot into your group chat.\n '
+                                  '2. call the /start command in the group chat and follow the instructions.\n')
+        return
 
-    user = update.effective_user
     update.message.reply_text('Please send your current location!')
     chat_id = update.message.chat_id
     if chat_id in locations:
         locations[chat_id].clear()
 
 
-def help_command(update: Update, context: CallbackContext) -> None:
+@bot.message_handler(commands=['help'])
+def help(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text('Use the command /start to find a common place to eat')
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
+        return
 
 
-def done(update: Update, context: CallbackContext):
+@bot.message_handler(commands=['find'])
+def find(update: Update, context: CallbackContext):
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
+        return
+
     chat_id = update.message.chat_id
     print("Dictionary print...")
     print(locations)
@@ -90,7 +121,7 @@ def location(update: Update, context: CallbackContext):
     print(chat_type)
     if chat_type == "private":
         print("is private")
-        update.message.reply_text('This bot can only be used in a group!')
+        update.message.reply_text('This bot can only be used in a group chat!')
         return
 
     location_data = message.location
@@ -117,8 +148,8 @@ def main() -> None:
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("done", done))
-    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("find", find))
+    dispatcher.add_handler(CommandHandler("help", help))
 
     location_handler = MessageHandler(Filters.location, location)
     dispatcher.add_handler(location_handler)
