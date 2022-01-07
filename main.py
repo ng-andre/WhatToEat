@@ -1,7 +1,7 @@
 import logging
 import os
 import telebot
-
+import mapAPI
 from telegram.ext import Updater
 from telebot import types
 from telebot.types import BotCommand
@@ -11,6 +11,7 @@ bot = telebot.TeleBot(TOKEN)
 
 bot.set_my_commands([
     BotCommand('start', 'Starts the bot'),
+    BotCommand('test', 'Show location results')
 ])
 
 
@@ -21,12 +22,18 @@ def start(message):
     keyboard.add(button_geo)
     bot.send_message(message.chat.id, "Test", reply_markup=keyboard)
 
+@bot.message_handler(commands=['test'])
+def test(message):
+    bot.send_message(message.chat.id, "Testing results")
+
+
+
+
 
 @bot.message_handler(content_types=['location'])
 def location(message):
     if message.location is not None:
         print(message.location)
         print(message)
-
 
 bot.infinity_polling()
