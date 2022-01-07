@@ -15,9 +15,14 @@ bot.
 
 import logging
 import os
+import telebot
 
+from telebot.types import BotCommand
 from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+TOKEN = os.getenv("TOKEN")
+bot = telebot.TeleBot(TOKEN)
 
 # Enable logging
 logging.basicConfig(
@@ -30,9 +35,16 @@ locations = {}
 central_location = {}
 flags = {}
 
+bot.set_my_commands([
+    BotCommand('start', 'Starts the bot'),
+    BotCommand('help', 'Get information on how to get started'),
+    BotCommand('find', 'Find central location and nearby restaurants')
+])
+
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
+@bot.message_handler(commands=['start'])
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
 
@@ -43,12 +55,14 @@ def start(update: Update, context: CallbackContext) -> None:
         locations[chat_id].clear()
 
 
-def help_command(update: Update, context: CallbackContext) -> None:
+@bot.message_handler(commands=['help'])
+def help(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text('Use the command /start to find a common place to eat')
 
 
-def done(update: Update, context: CallbackContext):
+@bot.message_handler(commands=['find'])
+def find(update: Update, context: CallbackContext):
     chat_id = update.message.chat_id
     print("Dictionary print...")
     print(locations)
@@ -117,8 +131,8 @@ def main() -> None:
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("done", done))
-    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("find", find))
+    dispatcher.add_handler(CommandHandler("help", help))
 
     location_handler = MessageHandler(Filters.location, location)
     dispatcher.add_handler(location_handler)
