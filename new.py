@@ -45,12 +45,7 @@ def start(update: Update, context: CallbackContext) -> None:
 
 def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
-    update.message.reply_text('This bot can only be used in a group!')
-
-
-def echo(update: Update, context: CallbackContext) -> None:
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+    update.message.reply_text('Use the command /start to find a common place to eat')
 
 
 def done(update: Update, context: CallbackContext):
@@ -82,14 +77,27 @@ def done(update: Update, context: CallbackContext):
 
         central_lat = (min_lat + max_lat) / 2
         central_long = (min_long + max_long) / 2
+        print(central_lat)
+        print(central_long)  # coordinates for API
+        update.message.reply_text("The central location is:", quote=False)
+        update.message.reply_location(central_lat, central_long, quote=False)
+        update.message.reply_text("Showing restaurants nearby", quote=False)
 
 
 def location(update: Update, context: CallbackContext):
     message = update.message
+    chat_type = message.chat.type
+    print(chat_type)
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group!')
+        return
+
     location_data = message.location
     user = message.from_user.username
     chat_id = message.chat_id
     current_pos = (location_data.latitude, location_data.longitude)
+    update.message.reply_text("Received {name}'s location!".format(name=message.from_user.first_name))
 
     #  initialise container for groupchat in locations
     if chat_id in locations:
@@ -112,8 +120,6 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("done", done))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
-    # on non command i.e message - echo the message on Telegram
-    # dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
     location_handler = MessageHandler(Filters.location, location)
     dispatcher.add_handler(location_handler)
 
