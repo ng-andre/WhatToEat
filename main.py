@@ -27,10 +27,10 @@ def start(message):
     # initialise key value pair for curr chat_id
     locations[chat_id] = {}
     print(chat_id)
-    keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    button_geo = types.KeyboardButton(text="Send Location", request_location=True)
-    keyboard.add(button_geo)
-    bot.send_message(message.chat.id, "Test", reply_markup=keyboard)
+    # keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    # button_geo = types.KeyboardButton(text="Send Location", request_location=True)
+    # keyboard.add(button_geo)
+    # bot.send_message(message.chat.id, "Test", reply_markup=keyboard)
 
 
 def request_start(chat_id):
@@ -69,6 +69,8 @@ def list_locations(message):
 
 @bot.message_handler(content_types=['location'])
 def location(message):
+    chat_id = message.chat.id
+    user_id = message.chat.fro
     if message.location is not None:
         print(message.location)
         print(message)
