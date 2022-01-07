@@ -1,3 +1,4 @@
+# REPLACED BY new.py
 import logging
 import os
 import telebot
