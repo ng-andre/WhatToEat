@@ -63,14 +63,14 @@ def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     chat_type = update.message.chat.type
     if chat_type == "private":
-        print("is private")
         update.message.reply_text('Get Started \n '
                                   '1. add @SGEatWhereBot into your group chat.\n '
                                   '2. call the /start command in the group chat and follow the instructions.\n')
         return
 
-    update.message.reply_text('Please send your current location! Click on the attach '
-                              'symbol(\U0001F4CE) and select the Location option.')
+    update.message.reply_text('1. Everyone uploads their location by clicking on the attach '
+                              'symbol(\U0001F4CE) and selecting the Location option. \n'
+                              '2. Once everyone is done, Use /find to find the central location')
 
     chat_id = update.message.chat_id
     if chat_id in locations:
@@ -80,10 +80,9 @@ def start(update: Update, context: CallbackContext) -> None:
 @bot.message_handler(commands=['help'])
 def help(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Type /start to start the bot and follow the instructions')
+    update.message.reply_text('/start : start the bot and follow the instructions\n')
     chat_type = update.message.chat.type
     if chat_type == "private":
-        print("is private")
         update.message.reply_text('This bot can only be used in a group chat!')
         return
 
@@ -92,13 +91,10 @@ def help(update: Update, context: CallbackContext) -> None:
 def find(update: Update, context: CallbackContext):
     chat_type = update.message.chat.type
     if chat_type == "private":
-        print("is private")
         update.message.reply_text('This bot can only be used in a group chat!')
         return
 
     chat_id = update.message.chat_id
-    print("Dictionary print...")
-    print(locations)
     if chat_id not in locations:  # Case 1: bot is newly added to groupchat
         update.message.reply_text("Please upload at least one location")
     elif not locations[chat_id]:  # Case 2: Data for specific groupchat is empty
@@ -106,7 +102,6 @@ def find(update: Update, context: CallbackContext):
     else:  # Everything is working fine
         message = update.message
         chat_id = message.chat_id
-        print("start of loop")
         first_pos = next(iter(locations[chat_id].values()))
         min_lat, max_lat = first_pos[0], first_pos[0]
         min_long, max_long = first_pos[1], first_pos[1]
@@ -124,10 +119,7 @@ def find(update: Update, context: CallbackContext):
 
         central_lat = (min_lat + max_lat) / 2
         central_long = (min_long + max_long) / 2
-        print(central_lat)
-        print(central_long)  # coordinates for API
         central_location[chat_id] = [central_lat, central_long]
-        print(central_location[chat_id])
         update.message.reply_text("The central location is:", quote=False)
         update.message.reply_location(central_lat, central_long, quote=False)
         update.message.reply_text("Run /filter to start filtering and choosing restaurants near your central location"
@@ -138,9 +130,7 @@ def find(update: Update, context: CallbackContext):
 def filter_places(update: Update, context: CallbackContext):
     message = update.message
     chat_type = message.chat.type
-    print(chat_type)
     if chat_type == "private":
-        print("is private")
         update.message.reply_text('This bot can only be used in a group chat!')
         return
 
@@ -210,7 +200,6 @@ def restaurants(update: Update, context: CallbackContext):
 # callbackquery handler for bars
 def bars(update: Update, context: CallbackContext):
     centre = central_location[update.callback_query.message.chat.id]
-    print(centre)
     query = update.callback_query
     query.answer()
     bars_map = mapAPI.getFoodPlaces("", "bar", centre[0], centre[1])
@@ -261,9 +250,7 @@ def nil(update: Update, context: CallbackContext):
 def location(update: Update, context: CallbackContext):
     message = update.message
     chat_type = message.chat.type
-    print(chat_type)
     if chat_type == "private":
-        print("is private")
         update.message.reply_text('This bot can only be used in a group chat!')
         return
 
