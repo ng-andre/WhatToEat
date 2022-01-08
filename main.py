@@ -1,216 +1,319 @@
-# REPLACED BY new.py
+#!/usr/bin/env python
+# pylint: disable=C0116,W0613
+# This program is dedicated to the public domain under the CC0 license.
+
+"""
+Simple Bot to reply to Telegram messages.
+First, a few handler functions are defined. Then, those functions are passed to
+the Dispatcher and registered at their respective places.
+Then, the bot is started and runs until we press Ctrl-C on the command line.
+Usage:
+Basic Echobot example, repeats messages.
+Press Ctrl-C on the command line or send a signal to the process to stop the
+bot.
+"""
+
 import logging
 import os
 import telebot
+import mapAPI
 
-from telegram.ext import Updater
-from telebot import types
-from telebot.types import (
-    BotCommand,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
-
-# can import from database
-locations = {}
-central_location = {}
+from telebot.types import BotCommand
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update, ForceReply, ParseMode
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext, Filters, \
+    PollAnswerHandler
 
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
+# Enable logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
+
+locations = {}
+central_location = {}
+flags = {}
+
 bot.set_my_commands([
     BotCommand('start', 'Starts the bot'),
-    BotCommand('done', 'Indicate that all participants have sent their address'),
-    BotCommand('list', 'Lists food places near central location'),
-    BotCommand('location', 'User sends current location'),
-    BotCommand('filter', 'Filters based on participants')
+    BotCommand('help', 'Get information on how to get started'),
+    BotCommand('find', 'Find central location and nearby restaurants'),
+    BotCommand('filter', 'Filters based on participants choices')
 ])
 
 
 def request_start(chat_id):
     bot.send_message(chat_id=chat_id, text='Please start the bot by sending /start')
+    return
 
 
 def request_done(chat_id):
     bot.send_message(chat_id=chat_id, text='Please indicate that all addresses have been entered by sending /done')
+    return
 
 
-def extract_arg(arg):
-    return arg.split()[1:]
-
-
-# start command; once run, bot will listen for addresses from group
+# Define a few command handlers. These usually take the two arguments update and
+# context.
 @bot.message_handler(commands=['start'])
-def start(message):
-    chat_id = message.chat.id
-    # initialise key value pair for curr chat_id
-    locations[chat_id] = {}
-    print(chat_id)
-    # keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    # button_geo = types.KeyboardButton(text="Send Location", request_location=True)
-    # keyboard.add(button_geo)
-    # bot.send_message(message.chat.id, "Test", reply_markup=keyboard)
-
-
-@bot.message_handler(commands=['location'])
-def send_location(message):
-    curr_chat_id = message.chat.id
-
-    # if user tries to send location without
-    if curr_chat_id not in locations:
-        request_start(curr_chat_id)
+def start(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('Get Started \n '
+                                  '1. add @SGEatWhereBot into your group chat.\n '
+                                  '2. call the /start command in the group chat and follow the instructions.\n')
         return
 
-    user_id = message.from_user.id
-    user_location = extract_arg(message.text)
-
-    locations[curr_chat_id].update({user_id: user_location})
-
-    print(locations.get(curr_chat_id))
-
-    bot.send_message(chat_id=curr_chat_id, text=f'Number of addresses: {len(locations[curr_chat_id])}')
+    update.message.reply_text('Please send your current location! Click on the attach '
+                              'symbol and select the Location option to do so!')
+    chat_id = update.message.chat_id
+    if chat_id in locations:
+        locations[chat_id].clear()
 
 
-# done command; once run, bot will calculate and return central location of all addresses entered
-@bot.message_handler(commands=['done'])
-def done(message):
-    curr_chat_id = message.chat.id
-    # if user enters /done before /start
-    if curr_chat_id not in locations:
-        # if not key value pair for curr_chat_id => request start
-        print('Not Working')
-        request_start(curr_chat_id)
+@bot.message_handler(commands=['help'])
+def help(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /help is issued."""
+    update.message.reply_text('Use the command /start to find a common place to eat')
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
         return
-    print(curr_chat_id)
-
-    # Run Le Zong algorithm to get central location with curr_chat_id as key
 
 
-@bot.message_handler(commands=['list'])
-def list_locations(message):
-    curr_chat_id = message.chat.id
-    if curr_chat_id not in central_location:
-        if curr_chat_id in locations:  # if user enters /list after start but before /done
-            request_done(curr_chat_id)
-        else:  # if user enters /list before /start
-            request_start(curr_chat_id)
+@bot.message_handler(commands=['find'])
+def find(update: Update, context: CallbackContext):
+    chat_type = update.message.chat.type
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
+        return
 
-    # once central location calculated
+    chat_id = update.message.chat_id
+    print("Dictionary print...")
+    print(locations)
+    if chat_id not in locations:  # Case 1: bot is newly added to groupchat
+        update.message.reply_text("Please upload at least one location")
+    elif not locations[chat_id]:  # Case 2: Data for specific groupchat is empty
+        update.message.reply_text("Please upload at least one location")
+    else:  # Everything is working fine
+        message = update.message
+        chat_id = message.chat_id
+        print("start of loop")
+        first_pos = next(iter(locations[chat_id].values()))
+        min_lat, max_lat = first_pos[0], first_pos[0]
+        min_long, max_long = first_pos[1], first_pos[1]
+        for x in locations[chat_id]:
+            curr_lat = locations[chat_id][x][0]
+            curr_long = locations[chat_id][x][1]
+            if curr_lat > max_lat:
+                max_lat = curr_lat
+            elif curr_lat < min_lat:
+                min_lat = curr_lat
+            if curr_long > max_long:
+                max_long = curr_long
+            elif curr_long < min_long:
+                min_long = curr_long
+
+        central_lat = (min_lat + max_lat) / 2
+        central_long = (min_long + max_long) / 2
+        print(central_lat)
+        print(central_long)  # coordinates for API
+        central_location[chat_id] = [central_lat, central_long]
+        print(central_location[chat_id])
+        update.message.reply_text("The central location is:", quote=False)
+        update.message.reply_location(central_lat, central_long, quote=False)
+        update.message.reply_text("Run /filter to start filtering and choosing restaurants near your central location"
+                                  , quote=False)
 
 
-@bot.message_handler(commands=['filter'])
-def filter_places(message):
-    chat_id = message.chat.id
+@bot.message_handler(commands=['filter'])  # done
+def filter_places(update: Update, context: CallbackContext):
+    message = update.message
+    chat_type = message.chat.type
+    print(chat_type)
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
+        return
+
+    chat_id = update.message.chat_id
 
     if chat_id not in locations:
         request_start(chat_id)
         return
 
-    # if chat_id not in central_location:
-    #     request_done(chat_id)
-    #     return
+    if chat_id not in central_location:
+        request_done(chat_id)
+        return
 
     chat_text = "Select where your group would like to dine."
 
-    places = ['restaurants', 'bars', 'cafes']
-    buttons = []
+    buttons = [
+        [
+            InlineKeyboardButton("Restaurants", callback_data='restaurants'),
+            InlineKeyboardButton("Bars", callback_data='bars'),
+            InlineKeyboardButton("Cafes", callback_data='cafes'),
+        ]
+    ]
 
-    for place in places:
-        row = []
-        button = InlineKeyboardButton(
-            place,
-            callback_data='place ' + place
-        )
-        row.append(button)
-        buttons.append(row)
-
-    bot.send_message(
-        chat_id=chat_id,
+    update.message.reply_text(
         text=chat_text,
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def handle_callback(call):
-    chat_id = call.message.chat.id
-    data = call.data
-    intent, extra_data = data.split()[0], data.split()[1:]
+def format_filtered_places(places):
+    text = 'These are the food places matching your filtered results near the common central location.\n'
+    index = 1
+    for name, description in places.items():
+        if index >= 6:
+            break
+        text += f'{index}. {name}, {description}\n'
+        index += 1
 
-    if intent == 'place':
-        view_place_selected(chat_id, extra_data)
-        return
-    if intent == 'restriction':
-        view_restaurants_suitable(chat_id, extra_data)
-        return
-
-    print(f'{chat_id}: Callback not implemented')
+    return text
 
 
-def view_place_selected(chat_id, data):
-    if data == ['cafes'] or data == ['bars']:
-        display_places_results(chat_id, data)
-        return
-    else:
-        # display restaurants: another format
-        display_restaurants(chat_id, data)
-        return
+# callbackquery handler for restaurants
+def restaurants(update: Update, context: CallbackContext):
+    query = update.callback_query
+    chat_id = update.callback_query.message.chat.id
+    query.answer()
 
+    # new InlineKeyboardMarkup to account for dietary restrictions
+    chat_text = 'Please indicate any special dietary preferences i.e. Halal / Vegetarian.' \
+                'Select NIL otherwise'
 
-def display_places_results(chat_id, data):  # replace with lz actual function call
-    bot.send_message(chat_id=chat_id, text=data)
-    return
+    buttons = [
+        [
+            InlineKeyboardButton("Halal", callback_data='halal'),
+            InlineKeyboardButton("Vegetarian", callback_data='vegetarian'),
+            InlineKeyboardButton("NIL", callback_data='nil')
+        ]
+    ]
 
-
-def display_restaurants(chat_id, data):
-    buttons = []
-    dietary_restrictions_chat_text = 'Please indicate any special dietary preferences i.e. Halal / Vegetarian. ' \
-                                     'Select NIL'
-
-    restrictions = ['Halal', 'Vegetarian', 'NIL']
-    buttons = []
-
-    for restriction in restrictions:
-        row = []
-        button = InlineKeyboardButton(
-            restriction,
-            callback_data='restriction ' + restriction
-        )
-        row.append(button)
-        buttons.append(row)
-
-    bot.send_message(
-        chat_id=chat_id,
-        text=dietary_restrictions_chat_text,
+    query.edit_message_text(
+        text=chat_text,
         reply_markup=InlineKeyboardMarkup(buttons)
     )
+    return
 
 
-def view_restaurants_suitable(chat_id, data):
-    if data == ['Halal'] or data == ['Vegetarian']:
-        display_restrictions_results(chat_id, data)
+# callbackquery handler for bars
+def bars(update: Update, context: CallbackContext):
+    centre = central_location[update.callback_query.message.chat.id]
+    print(centre)
+    query = update.callback_query
+    query.answer()
+    bars_map = mapAPI.getFoodPlaces("", "bar", centre[0], centre[1])
+    query.edit_message_text(text=f'{format_filtered_places(bars_map)}')
+    return
+
+
+# callbackquery handler for cafes
+def cafes(update: Update, context: CallbackContext):
+    centre = central_location[update.callback_query.message.chat.id]
+    query = update.callback_query
+    query.answer()
+    cafes_map = mapAPI.getFoodPlaces("", "cafe", centre[0], centre[1])
+    query.edit_message_text(text=f'{format_filtered_places(cafes_map)}')
+    return
+
+
+# callbackquery handler for bars
+def halal(update: Update, context: CallbackContext):
+    centre = central_location[update.callback_query.message.chat.id]
+    query = update.callback_query
+    query.answer()
+    halal_places = mapAPI.getFoodPlaces("Halal", "restaurant", centre[0], centre[1])
+    query.edit_message_text(text=f'{format_filtered_places(halal_places)}')
+    return
+
+
+# callbackquery handler for cafes
+def vegetarian(update: Update, context: CallbackContext):
+    centre = central_location[update.callback_query.message.chat.id]
+    query = update.callback_query
+    query.answer()
+    veg_places = mapAPI.getFoodPlaces("Vegetarian", "restaurant", centre[0], centre[1])
+    query.edit_message_text(text=f'{format_filtered_places(veg_places)}')
+    return
+
+
+# callbackquery handler for cafes
+def nil(update: Update, context: CallbackContext):
+    centre = central_location[update.callback_query.message.chat.id]
+    query = update.callback_query
+    query.answer()
+    places = mapAPI.getFoodPlaces("", "restaurant", centre[0], centre[1])
+    query.edit_message_text(text=f'{format_filtered_places(places)}')
+    return
+
+
+def location(update: Update, context: CallbackContext):
+    message = update.message
+    chat_type = message.chat.type
+    print(chat_type)
+    if chat_type == "private":
+        print("is private")
+        update.message.reply_text('This bot can only be used in a group chat!')
         return
+
+    location_data = message.location
+    user = message.from_user.username
+    chat_id = message.chat_id
+    current_pos = (location_data.latitude, location_data.longitude)
+    update.message.reply_text("Received {name}'s location!".format(name=message.from_user.first_name))
+
+    #  initialise container for groupchat in locations
+    if chat_id in locations:
+        locations[chat_id].update({user: current_pos})
     else:
-        print('cuisines')
-        display_cuisines(chat_id, data)
-        return
+        init_location = {chat_id: {user: current_pos}}
+        locations.update(init_location)
 
 
-def display_restrictions_results(chat_id, data):  # replace with lz actual function call
-    bot.send_message(chat_id=chat_id, text=data)
-    return
+def main() -> None:
+    """Start the bot."""
+    # Create the Updater and pass it your bot's token.
+    updater = Updater(os.getenv("TOKEN"))
+
+    # Get the dispatcher to register handlers
+    dispatcher = updater.dispatcher
+
+    # on different commands - answer in Telegram
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("find", find))
+    dispatcher.add_handler(CommandHandler("help", help))
+    dispatcher.add_handler(CommandHandler("filter", filter_places))
+
+    # Callback Query Handlers for filtering between restaurants, bars and cafes
+    dispatcher.add_handler(CallbackQueryHandler(restaurants, pattern='^' + 'restaurants' + '$'))
+    dispatcher.add_handler(CallbackQueryHandler(bars, pattern='^' + 'bars' + '$'))
+    dispatcher.add_handler(CallbackQueryHandler(cafes, pattern='^' + 'cafes' + '$'))
+
+    # Callback Query Handlers for dietary restrictions
+    dispatcher.add_handler(CallbackQueryHandler(halal, pattern='^' + 'halal' + '$'))
+    dispatcher.add_handler(CallbackQueryHandler(vegetarian, pattern='^' + 'vegetarian' + '$'))
+    dispatcher.add_handler(CallbackQueryHandler(nil, pattern='^' + 'nil' + '$'))
+
+    location_handler = MessageHandler(Filters.location, location)
+    dispatcher.add_handler(location_handler)
+
+    # Start the Bot
+    updater.start_polling()
+
+    # Run the bot until you press Ctrl-C or the process receives SIGINT,
+    # SIGTERM or SIGABRT. This should be used most of the time, since
+    # start_polling() is non-blocking and will stop the bot gracefully.
+    updater.idle()
 
 
-def display_cuisines(chat_id, data):  # replace with lz actual function call
-    bot.send_message(chat_id=chat_id, text=data)
-    return
-
-
-@bot.message_handler(content_types=['location'])
-def location(message):
-    if message.location is not None:
-        print(message.location)
-        print(message)
-
-
-bot.infinity_polling()
+if __name__ == '__main__':
+    main()
