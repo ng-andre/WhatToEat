@@ -23,6 +23,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update, ForceRe
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext, Filters, \
     PollAnswerHandler
 
+PORT = int(os.environ.get('PORT', 8443))
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
@@ -282,7 +283,7 @@ def location(update: Update, context: CallbackContext):
 def main() -> None:
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
-    updater = Updater(os.getenv("TOKEN"))
+    updater = Updater(TOKEN, use_context=True)
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
@@ -307,7 +308,11 @@ def main() -> None:
     dispatcher.add_handler(location_handler)
 
     # Start the Bot
-    updater.start_polling()
+    # updater.start_polling()
+    updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=TOKEN,
+                          webhook_url='https://sgeatwherebot.herokuapp.com/' + TOKEN)
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
