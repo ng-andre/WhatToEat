@@ -1,4 +1,3 @@
-import geocoding
 from math import sin, cos, sqrt, atan2, radians
 import place
 
@@ -17,17 +16,17 @@ def calculatedistance(x1, x2, y1, y2):
     return distance
 
 
-placeResults = place.results
-placeDetails = place.storeDetails
+def getFoodPlaces(search, type, lat, lng):
+    placeResults = place.getPlaces(search, type, lat, lng)
+    placeDetails = {}
 
-for i in range(len(placeResults)):
-    placeLat = placeResults[i]["geometry"]["location"]["lat"]
-    placeLong = placeResults[i]["geometry"]["location"]["lng"]
-    dist = calculatedistance(geocoding.lat, placeLat, geocoding.long, placeLong)
-    if dist < 1500:
-        name = placeResults[i]["name"]
-        formattedAddress = placeResults[i]["formatted_address"]
-        placeDetails[name] = formattedAddress
+    for i in range(len(placeResults)):
+        placeLat = placeResults[i]["geometry"]["location"]["lat"]
+        placeLong = placeResults[i]["geometry"]["location"]["lng"]
+        dist = calculatedistance(lat, placeLat, lng, placeLong)
+        if dist < 1500:
+            name = placeResults[i]["name"]
+            formattedAddress = placeResults[i]["formatted_address"]
+            placeDetails[name] = formattedAddress
+    return placeDetails
 
-for key in placeDetails:
-    print("NAME: " + key + "   LOCATION: " + placeDetails[key])
