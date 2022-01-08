@@ -23,6 +23,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update, ForceRe
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext, Filters, \
     PollAnswerHandler
 
+PORT = int(os.environ.get('PORT', 8443))
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
@@ -38,20 +39,20 @@ central_location = {}
 flags = {}
 
 bot.set_my_commands([
-    BotCommand('start', 'Starts the bot'),
+    BotCommand('start', 'Starts a new session'),
     BotCommand('help', 'Get information on how to get started'),
     BotCommand('find', 'Find central location and nearby restaurants'),
-    BotCommand('filter', 'Filters based on participants choices')
+    BotCommand('filter', 'Filters based on participants\' choices')
 ])
 
 
 def request_start(chat_id):
-    bot.send_message(chat_id=chat_id, text='Please start the bot by sending /start')
+    bot.send_message(chat_id=chat_id, text='Type /start to start a new session')
     return
 
 
 def request_done(chat_id):
-    bot.send_message(chat_id=chat_id, text='Please indicate that all addresses have been entered by sending /done')
+    bot.send_message(chat_id=chat_id, text='When everyone uploaded their location, type /find to find central location')
     return
 
 
@@ -69,7 +70,8 @@ def start(update: Update, context: CallbackContext) -> None:
         return
 
     update.message.reply_text('Please send your current location! Click on the attach '
-                              'symbol and select the Location option to do so!')
+                              'symbol(\U0001F4CE) and select the Location option.')
+
     chat_id = update.message.chat_id
     if chat_id in locations:
         locations[chat_id].clear()
@@ -78,7 +80,7 @@ def start(update: Update, context: CallbackContext) -> None:
 @bot.message_handler(commands=['help'])
 def help(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Use the command /start to find a common place to eat')
+    update.message.reply_text('Type /start to start the bot and follow the instructions')
     chat_type = update.message.chat.type
     if chat_type == "private":
         print("is private")
@@ -282,7 +284,7 @@ def location(update: Update, context: CallbackContext):
 def main() -> None:
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
-    updater = Updater(os.getenv("TOKEN"))
+    updater = Updater(TOKEN, use_context=True)
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
@@ -307,7 +309,11 @@ def main() -> None:
     dispatcher.add_handler(location_handler)
 
     # Start the Bot
-    updater.start_polling()
+    # updater.start_polling()
+    updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=TOKEN,
+                          webhook_url='https://sgeatwherebot.herokuapp.com/' + TOKEN)
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
