@@ -65,7 +65,7 @@ def start_message_group(update):
     update.message.reply_text('Get Started \n '
                               '1. Everyone uploads their location by clicking on the attach '
                               'symbol (\U0001F4CE) and selecting the Location option. \n'
-                              '2. /find to find the central location'
+                              '2. /find to find the central location\n'
                               '3. /filter to find nearby F&B outlets')
 
 
